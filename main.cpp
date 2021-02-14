@@ -34,6 +34,7 @@ int main()
     std::vector<int> vec_of_time;
     std::vector<int> vec_of_values;
     std::vector<int> result;
+
     int num_of_threads = 0;
     int size_of_vec = 0;
 
@@ -61,11 +62,11 @@ int main()
 
     for (int i = 0; i < num_of_threads; i++)
         my_threads[i] = new std::thread(find_extremum,
-                                        std::ref(vec_of_values),
-                                        i * attitude,
-                                        (i + 1) * attitude,
-                                        false,
-                                        std::ref(result[i]));
+            std::ref(vec_of_values),
+            i * attitude,
+            (i + 1) * attitude,
+            false,
+            std::ref(result[i]));
 
     for (int i = 0; i < num_of_threads; i++)
     {
@@ -73,11 +74,17 @@ int main()
         delete my_threads[i];
     }
 
+    std::cout << "There are minimal elements in " << num_of_threads << " threads:\n";
+    for (int i : result)
+        std::cout << i << ' ';
+
     int min = 0;
 
     find_extremum(std::ref(result), 0, num_of_threads, true, std::ref(min));
 
     auto end = std::chrono::system_clock::now();
+
+    std::cout << "Miximal element is " << min << std::endl;
 
     int time1 = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 
@@ -104,23 +111,24 @@ int main()
 
     /* Определяю кол-во потоков и размер вектора, при котором многопоточная реализация становится эффективнее однопоточной*/
 
-    std::vector<std::thread*> new_threads(size_of_vec);
+    std::vector<std::thread*> new_threads;
 
-    for (int i = 2; i < vec_of_values.size() + 1; i++)
+    for (int i = 2; i < std::thread::hardware_concurrency() + 1; i++)
     {
         result.resize(i);
+        new_threads.resize(i);
 
         int attitude = size_of_vec / i;
 
         auto begin = std::chrono::system_clock::now();
 
         for (int j = 0; j < i; j++)
-            new_threads[i] = new std::thread(find_extremum,
-                                             std::ref(vec_of_values),
-                                             j * attitude,
-                                             (j + 1) * attitude,
-                                             false,
-                                             std::ref(result[j]));
+            new_threads[j] = new std::thread(find_extremum,
+                std::ref(vec_of_values),
+                j * attitude,
+                (j + 1) * attitude,
+                false,
+                std::ref(result[j]));
 
         for (int j = 0; j < i; j++)
         {
@@ -137,7 +145,7 @@ int main()
         vec_of_time.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count());
 
         result.clear();
-        my_threads.clear();
+        new_threads.clear();
     }
 
     int min_time = vec_of_time[0];
